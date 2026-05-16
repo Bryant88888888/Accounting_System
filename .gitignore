@@ -36,3 +36,19 @@ next-env.d.ts
 # images / zip uploads
 S__*.jpg
 PAL_crawlers_package.zip
+
+# Python backend
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+.env/
+
+# SQLite database
+*.db
+*.sqlite3
