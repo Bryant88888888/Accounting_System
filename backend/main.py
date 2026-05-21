@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from database import Base, engine
+from database import SessionLocal
+from utils.bootstrap import ensure_initial_super_admin
 from utils.crypto import encrypt_secret
 
 # Import all models so Base.metadata sees them
@@ -57,6 +59,9 @@ def get_cors_origins():
 
 
 ensure_runtime_columns()
+
+with SessionLocal() as db:
+    ensure_initial_super_admin(db)
 
 app = FastAPI(title="代理分帳系統 API", version="1.0.0")
 

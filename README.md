@@ -51,9 +51,13 @@ TELEGRAM_BOT_TOKEN=<Telegram bot token>
 TELEGRAM_BOT_USERNAME=pal_crawler_bot
 TELEGRAM_WEBHOOK_SECRET=<自訂長隨機字串>
 CORS_ORIGINS=<前端 Render 網址，例如 https://xxx.onrender.com>
+INITIAL_ADMIN_ACCOUNT=<第一次啟動時建立的超級管理員帳號>
+INITIAL_ADMIN_PASSWORD=<第一次啟動時建立的超級管理員密碼>
+INITIAL_ADMIN_NICKNAME=超級管理員
 ```
 
 `PRODUCT_PASSWORD_SECRET` 必須固定保存；如果換掉，既有產品密碼會無法解密。
+`INITIAL_ADMIN_*` 只會在資料庫沒有任何 super admin 時建立第一個管理員。
 
 ### 3. 前端 Web Service
 
