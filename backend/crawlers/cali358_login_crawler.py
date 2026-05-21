@@ -53,6 +53,25 @@ class Cali358Crawler:
                 pass
         return False
 
+    def _fetch_operator_info(self):
+        """
+        從登入後的 operator API 取得目前帳號資訊。
+        新版卡利不一定會把 userInfo 寫入 cookie，網頁本身也是靠這支 API 取得 agentId。
+        """
+        try:
+            response = self.session.get(f"{self.api_url}/operator")
+            result = response.json()
+        except requests.RequestException:
+            return False
+
+        if result.get("resultCode") != 0 or not isinstance(result.get("data"), dict):
+            return False
+
+        self.user_info = result["data"]
+        if not self.agent_id:
+            self.agent_id = self.user_info.get("agentId")
+        return True
+
     def _get_timestamp(self) -> str:
         """
         生成時間戳參數 (防快取)
@@ -120,8 +139,8 @@ class Cali358Crawler:
                 # 取得選單
                 self.session.get(f"{self.api_url}/menu")
 
-                # 從 cookies 解析 userInfo
-                if self._parse_user_info_from_cookies():
+                # 從 cookies 解析 userInfo；新版卡利可能改由 /operator 提供
+                if self._parse_user_info_from_cookies() or self._fetch_operator_info():
                     if not self.agent_id:
                         self.agent_id = self.user_info.get('agentId')
                     print(f"[成功] 登入成功 - 代理商: {self.user_info.get('agentUserName')}, AgentID: {self.agent_id}")
@@ -186,6 +205,49 @@ class Cali358Crawler:
             print(f"[錯誤] 請求錯誤: {e}")
             return {}
 
+    def get_simple_profit_report(self, start_time: int = None, end_time: int = None) -> dict:
+        """
+        Fetch the Cali simple profit report.
+
+        The Cali page fields map to:
+        - player win/loss: data.total.summary.INFERIOR.winLose
+        - player valid bet: data.total.totalValidBetAmount
+        """
+        if not self.token:
+            print("[?航炊] 撠?餃")
+            return {}
+
+        if not self.agent_id:
+            print("[?航炊] ?⊥??? agentId")
+            return {}
+
+        if start_time is None:
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            start_time = int(today.timestamp() * 1000)
+
+        if end_time is None:
+            tomorrow = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            end_time = int(tomorrow.timestamp() * 1000)
+
+        params = {
+            't': self._get_timestamp(),
+            'agentId': self.agent_id,
+            'startTime': start_time,
+            'endTime': end_time,
+            'page.numPerPage': 100,
+            'page.pageNum': 1,
+        }
+
+        try:
+            response = self.session.get(
+                f"{self.api_url}/reports/profit/simple/{self.agent_id}",
+                params=params
+            )
+            return response.json()
+        except requests.RequestException as e:
+            print(f"[?航炊] 隢??航炊: {e}")
+            return {}
+
     def get_subagents_report(self, start_time: int = None, end_time: int = None) -> dict:
         """
         取得子代理報表
@@ -239,6 +301,31 @@ class Cali358Crawler:
         Returns:
             dict: 本週報表資料
         """
+        start_time, end_time = self._get_week_range()
+        return self.get_profit_summary(start_time, end_time)
+
+    def get_week_simple_profit_report(self) -> dict:
+        """
+        Fetch this week's simple profit report.
+        """
+        start_time, end_time = self._get_week_range()
+        return self.get_simple_profit_report(start_time, end_time)
+
+    def get_week_subagents_report(self) -> dict:
+        """
+        取得本週子代理報表
+
+        Returns:
+            dict: 本週子代理報表資料
+        """
+        start_time, end_time = self._get_week_range()
+        return self.get_subagents_report(start_time, end_time)
+
+    def _get_week_range(self) -> tuple[int, int]:
+        """
+        計算本週一 00:00 到下週一 00:00 的毫秒時間戳。
+        卡利後台的「本週」查詢使用這個區間。
+        """
         # 計算本週一 00:00
         today = datetime.now()
         monday = today - timedelta(days=today.weekday())
@@ -249,8 +336,7 @@ class Cali358Crawler:
 
         start_time = int(monday.timestamp() * 1000)
         end_time = int(next_monday.timestamp() * 1000)
-
-        return self.get_profit_summary(start_time, end_time)
+        return start_time, end_time
 
     def logout(self):
         """

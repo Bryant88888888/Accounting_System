@@ -6,6 +6,7 @@ class SettlementReport(Base):
     __tablename__ = "settlement_reports"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=True)
     start_date = Column(Text)
     end_date = Column(Text)
     created_at = Column(Text)

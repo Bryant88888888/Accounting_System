@@ -163,6 +163,19 @@ class Tz98Crawler:
         })
         return response.json()
 
+    def query_week_bill_all(self, mem_id: str = "-1") -> dict:
+        """
+        Query this week's all-game bill report.
+        """
+        date_range = self.get_date_range('W', 'acctime')
+        if not date_range or not date_range.get('s') or not date_range.get('e'):
+            return {}
+        date_start = date_range['s'].split(' ')[0]
+        date_end = date_range['e'].split(' ')[0]
+        result = self.query_bill_all(date_start, date_end, mem_id)
+        result["_date_range"] = date_range
+        return result
+
     def query_bill_type(self, date_start: str, date_end: str, mem_id: str = "-1") -> dict:
         """
         查詢分類帳 (依下注方式分類)

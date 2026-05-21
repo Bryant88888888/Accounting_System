@@ -14,6 +14,7 @@ interface ProductResponse {
   platform_url: string | null
   account: string | null
   crawler_type: string | null
+  crawler_agent_id: number | null
   status: string
   upstream: PartnerRef | null
   my_percentage: number | null
@@ -41,6 +42,7 @@ function toProduct(r: ProductResponse): Product {
     account: r.account || '',
     password: '',
     crawlerType: r.crawler_type ?? null,
+    crawlerAgentId: r.crawler_agent_id ?? null,
     status: r.status as Product['status'],
     upstream: r.upstream
       ? { id: r.upstream.id, name: r.upstream.name, percentage: r.upstream.percentage }
@@ -64,6 +66,7 @@ function toApiBody(data: Partial<ProductFormData>) {
     account: data.account,
     password: data.password || undefined,
     crawler_type: data.crawlerType || undefined,
+    crawler_agent_id: data.crawlerAgentId || null,
     upstream_partner_id: data.upstream ? Number(data.upstream.id) : null,
     upstream_percentage: data.upstream?.percentage,
     my_percentage: data.myPercentage,
@@ -117,4 +120,14 @@ export async function testConnection(id: string): Promise<{ success: boolean; me
 
 export async function fetchReport(id: string): Promise<{ success: boolean; data?: unknown; error?: string }> {
   return apiClient.post(`/api/products/${id}/fetch-report`, {})
+}
+
+export interface PlayerMetrics {
+  player_valid_bet: number
+  player_win_loss: number
+  source?: unknown
+}
+
+export async function fetchPlayerMetrics(id: string): Promise<{ success: boolean; data?: PlayerMetrics; error?: string }> {
+  return apiClient.post(`/api/products/${id}/player-metrics`, {})
 }

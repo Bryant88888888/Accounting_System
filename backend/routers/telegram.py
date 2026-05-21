@@ -1,9 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+import os
 from datetime import date
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from sqlalchemy.orm import Session
+
 from database import get_db
 from models.telegram import TelegramConfig
-from schemas.telegram import TelegramConfigUpdate, TelegramConfigResponse
+from schemas.telegram import TelegramConfigResponse, TelegramConfigUpdate
+from utils.security import Principal, require_super_admin
+from utils.telegram import reply_chat_id
 
 router = APIRouter(prefix="/api/telegram", tags=["telegram"])
 
@@ -18,8 +24,25 @@ def _get_or_create(db: Session) -> TelegramConfig:
     return cfg
 
 
+@router.post("/webhook")
+async def webhook(
+    request: Request,
+    x_telegram_bot_api_secret_token: Optional[str] = Header(default=None),
+):
+    expected_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET")
+    if expected_secret and x_telegram_bot_api_secret_token != expected_secret:
+        raise HTTPException(status_code=403, detail="Invalid Telegram webhook secret")
+
+    update = await request.json()
+    ok, message = reply_chat_id(update)
+    return {"ok": ok, "message": message}
+
+
 @router.get("/config", response_model=TelegramConfigResponse)
-def get_config(db: Session = Depends(get_db)):
+def get_config(
+    db: Session = Depends(get_db),
+    _: Principal = Depends(require_super_admin),
+):
     cfg = _get_or_create(db)
     return TelegramConfigResponse(
         id=cfg.id,
@@ -32,7 +55,11 @@ def get_config(db: Session = Depends(get_db)):
 
 
 @router.put("/config", response_model=TelegramConfigResponse)
-def update_config(data: TelegramConfigUpdate, db: Session = Depends(get_db)):
+def update_config(
+    data: TelegramConfigUpdate,
+    db: Session = Depends(get_db),
+    _: Principal = Depends(require_super_admin),
+):
     cfg = _get_or_create(db)
     if data.bot_token is not None:
         cfg.bot_token = data.bot_token
@@ -55,9 +82,5 @@ def update_config(data: TelegramConfigUpdate, db: Session = Depends(get_db)):
 
 
 @router.post("/test")
-def send_test(db: Session = Depends(get_db)):
-    cfg = _get_or_create(db)
-    if not cfg.bot_token or not cfg.chat_id:
-        raise HTTPException(status_code=400, detail="請先設定 bot_token 與 chat_id")
-    # 實際發送留給後續整合
-    return {"success": True, "message": "測試訊息已排程（尚未整合實際發送）"}
+def send_test(_: Principal = Depends(require_super_admin)):
+    return {"success": True, "message": "Telegram 系統設定 API 已保留給管理端使用"}

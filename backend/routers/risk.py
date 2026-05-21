@@ -1,15 +1,29 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
+
 from database import get_db
+from models.product import Product
 from models.risk import RiskRecord
+from utils.security import Principal, get_current_principal
 
 router = APIRouter(prefix="/api/risk", tags=["risk"])
 
 
+def scoped_risk_query(db: Session, principal: Principal):
+    q = db.query(RiskRecord)
+    if principal.is_super_admin:
+        return q
+    if principal.is_tenant:
+        return q.join(Product, RiskRecord.product_id == Product.id).filter(Product.tenant_id == principal.id)
+    return q.join(Product, RiskRecord.product_id == Product.id).filter(Product.tenant_id.is_(None))
+
+
 @router.get("/members")
-def list_members(db: Session = Depends(get_db)):
-    records = db.query(RiskRecord).order_by(RiskRecord.id.desc()).all()
+def list_members(
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_current_principal),
+):
+    records = scoped_risk_query(db, principal).order_by(RiskRecord.id.desc()).all()
     return [
         {
             "id": r.id,
@@ -27,8 +41,12 @@ def list_members(db: Session = Depends(get_db)):
 
 
 @router.get("/members/{name}/history")
-def member_history(name: str, db: Session = Depends(get_db)):
-    records = db.query(RiskRecord).filter(RiskRecord.member_name == name).all()
+def member_history(
+    name: str,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_current_principal),
+):
+    records = scoped_risk_query(db, principal).filter(RiskRecord.member_name == name).all()
     return [
         {
             "id": r.id,

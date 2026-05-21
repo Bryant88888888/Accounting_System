@@ -1,6 +1,7 @@
 import requests
 import re
 from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
 
 class Crawler:
     def __init__(self):
@@ -160,6 +161,18 @@ class Crawler:
 
         response = self.session.post(url, data=form_data)
         return response.text
+
+    def query_week_history(self) -> str:
+        """
+        Query this week's history report.
+        """
+        today = datetime.now()
+        monday = today - timedelta(days=today.weekday())
+        sunday = monday + timedelta(days=6)
+        return self.query_history(
+            monday.strftime('%Y-%m-%d'),
+            sunday.strftime('%Y-%m-%d'),
+        )
 
     def parse_report(self, html: str, date_start: str, date_end: str):
         """

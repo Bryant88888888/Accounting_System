@@ -15,6 +15,7 @@ export interface Product {
   account: string
   password: string
   crawlerType: string | null
+  crawlerAgentId: number | null
   status: 'active' | 'inactive'
   upstream: Partner | null
   myPercentage: number

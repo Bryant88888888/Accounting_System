@@ -1,12 +1,30 @@
+from datetime import date
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional
-from datetime import date
+
 from database import get_db
-from models.report import SettlementReport, SettlementProduct, SettlementMember
-from schemas.report import ReportCreate, ReportResponse, ProductResponse, MemberResponse, ReportTotals
+from models.report import SettlementMember, SettlementProduct, SettlementReport
+from schemas.report import (
+    MemberResponse,
+    ProductResponse,
+    ReportCreate,
+    ReportResponse,
+    ReportTotals,
+)
+from utils.security import Principal, get_current_principal
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+def scoped_report_query(db: Session, principal: Principal):
+    q = db.query(SettlementReport)
+    if principal.is_tenant:
+        return q.filter(SettlementReport.tenant_id == principal.id)
+    if not principal.is_super_admin:
+        return q.filter(SettlementReport.tenant_id.is_(None))
+    return q
 
 
 def build_report_response(report: SettlementReport, db: Session) -> ReportResponse:
@@ -16,8 +34,13 @@ def build_report_response(report: SettlementReport, db: Session) -> ReportRespon
 
     products = []
     totals = ReportTotals(
-        bet_count=0, bet_amount=0, valid_bet=0, raw_win_loss=0,
-        rebate_amount=0, discount_amount=0, settlement=0,
+        bet_count=0,
+        bet_amount=0,
+        valid_bet=0,
+        raw_win_loss=0,
+        rebate_amount=0,
+        discount_amount=0,
+        settlement=0,
     )
 
     for sp in products_raw:
@@ -66,27 +89,31 @@ def get_settlement(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    principal: Principal = Depends(get_current_principal),
 ):
-    # 先嘗試精確日期範圍查詢
-    q = db.query(SettlementReport)
+    q = scoped_report_query(db, principal)
     if start_date:
         q = q.filter(SettlementReport.start_date == start_date)
     if end_date:
         q = q.filter(SettlementReport.end_date == end_date)
     report = q.order_by(SettlementReport.id.desc()).first()
 
-    # 找不到精確匹配時，回傳最新一筆報表
     if not report:
-        report = db.query(SettlementReport).order_by(SettlementReport.id.desc()).first()
+        report = scoped_report_query(db, principal).order_by(SettlementReport.id.desc()).first()
 
     if not report:
-        raise HTTPException(status_code=404, detail="找不到報表資料")
+        raise HTTPException(status_code=404, detail="尚無報表資料")
     return build_report_response(report, db)
 
 
 @router.post("/settlement", response_model=ReportResponse, status_code=201)
-def create_report(data: ReportCreate, db: Session = Depends(get_db)):
+def create_report(
+    data: ReportCreate,
+    db: Session = Depends(get_db),
+    principal: Principal = Depends(get_current_principal),
+):
     report = SettlementReport(
+        tenant_id=principal.id if principal.is_tenant else None,
         start_date=data.start_date,
         end_date=data.end_date,
         created_at=str(date.today()),

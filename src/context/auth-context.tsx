@@ -18,15 +18,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem("token")
-    if (!token) {
-      setIsLoading(false)
-      return
+    let mounted = true
+
+    async function restoreSession() {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        if (mounted) setIsLoading(false)
+        return
+      }
+
+      try {
+        const account = await getMeApi()
+        if (mounted) setUser(account)
+      } catch {
+        localStorage.removeItem("token")
+      } finally {
+        if (mounted) setIsLoading(false)
+      }
     }
-    getMeApi()
-      .then(setUser)
-      .catch(() => localStorage.removeItem("token"))
-      .finally(() => setIsLoading(false))
+
+    restoreSession()
+    return () => {
+      mounted = false
+    }
   }, [])
 
   async function login(account: string, password: string) {

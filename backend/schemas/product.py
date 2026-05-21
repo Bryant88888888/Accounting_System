@@ -24,6 +24,7 @@ class ProductCreate(BaseModel):
     account: Optional[str] = None
     password: Optional[str] = None
     crawler_type: Optional[str] = None
+    crawler_agent_id: Optional[int] = None
     upstream_partner_id: Optional[int] = None
     upstream_percentage: Optional[float] = None
     my_percentage: Optional[float] = None
@@ -42,6 +43,7 @@ class ProductUpdate(BaseModel):
     account: Optional[str] = None
     password: Optional[str] = None
     crawler_type: Optional[str] = None
+    crawler_agent_id: Optional[int] = None
     upstream_partner_id: Optional[int] = None
     upstream_percentage: Optional[float] = None
     my_percentage: Optional[float] = None
@@ -66,6 +68,7 @@ class ProductResponse(BaseModel):
     platform_url: Optional[str]
     account: Optional[str]
     crawler_type: Optional[str]
+    crawler_agent_id: Optional[int]
     status: str
     upstream: Optional[PartnerRef]
     my_percentage: Optional[float]

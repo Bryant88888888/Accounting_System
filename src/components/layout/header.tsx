@@ -1,10 +1,14 @@
 "use client"
 
-import { Globe, ChevronDown, LogOut, Settings, User } from "lucide-react"
+import { ChevronDown, LogOut, Menu, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick: () => void
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth()
   const router = useRouter()
 
@@ -14,40 +18,34 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-30 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-      <div />
-      <div className="flex items-center gap-4">
-        {/* Language Switcher */}
-        <button className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-          <Globe className="w-4 h-4" />
-          <span>文A</span>
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4 md:px-6">
+      <button
+        type="button"
+        aria-label="切換選單"
+        onClick={onMenuClick}
+        className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      <div className="relative group">
+        <button className="flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-gray-900">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+            <User className="h-4 w-4" />
+          </div>
+          <span className="font-medium">{user?.nickname ?? "使用者"}</span>
+          <ChevronDown className="h-4 w-4" />
         </button>
 
-        {/* User Menu */}
-        <div className="relative group">
-          <button className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 transition-colors">
-            <div className="w-8 h-8 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4" />
-            </div>
-            <span className="font-medium">{user?.nickname ?? "管理員"}</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
-
-          {/* Dropdown */}
-          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-            <div className="py-1">
-              <a href="/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                <Settings className="w-4 h-4" />
-                <span>個人設定</span>
-              </a>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-gray-50 w-full text-left"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>登出</span>
-              </button>
-            </div>
+        <div className="invisible absolute right-0 top-full mt-1 w-40 rounded-lg border border-gray-200 bg-white opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
+          <div className="py-1">
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>登出</span>
+            </button>
           </div>
         </div>
       </div>

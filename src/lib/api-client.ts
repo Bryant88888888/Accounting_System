@@ -10,9 +10,14 @@ export class ApiError extends Error {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const { headers: customHeaders, ...restOptions } = options ?? {}
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
-  const authHeader = token ? { Authorization: `Bearer ${token}` } : {}
+  const headers = new Headers(customHeaders)
+  headers.set('Content-Type', 'application/json')
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...authHeader, ...customHeaders },
+    headers,
     ...restOptions,
   })
 

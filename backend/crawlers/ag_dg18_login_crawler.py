@@ -124,6 +124,38 @@ class AGCrawler:
         """檢查是否已登入"""
         return self.token is not None
 
+    def get_week_range(self):
+        """
+        Return this week's Monday 00:00:00 to Sunday 23:59:59 for DG reports.
+        """
+        today = datetime.now()
+        monday = today - timedelta(days=today.weekday())
+        monday = monday.replace(hour=0, minute=0, second=0, microsecond=0)
+        sunday = monday + timedelta(days=6, hours=23, minutes=59, seconds=59)
+        return (
+            monday.strftime("%Y-%m-%d %H:%M:%S"),
+            sunday.strftime("%Y-%m-%d %H:%M:%S"),
+        )
+
+    def get_week_statistics(self):
+        start_date, end_date = self.get_week_range()
+        return self.get_statistics(
+            date_unit="Week",
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def get_week_statistics_list(self, level_type="Agent", page_no=1, page_size=10):
+        start_date, end_date = self.get_week_range()
+        return self.get_statistics_list(
+            date_unit="Week",
+            start_date=start_date,
+            end_date=end_date,
+            level_type=level_type,
+            page_no=page_no,
+            page_size=page_size,
+        )
+
     def get_statistics(self, date_unit="Today", start_date=None, end_date=None):
         """
         取得輸贏報表統計總覽
