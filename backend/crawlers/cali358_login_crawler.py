@@ -6,6 +6,18 @@ from urllib.parse import unquote
 from datetime import datetime, timedelta
 
 
+def _response_json(response: requests.Response, step: str) -> dict:
+    try:
+        return response.json()
+    except ValueError as exc:
+        body = (response.text or "").strip().replace("\n", " ")[:240]
+        content_type = response.headers.get("content-type", "")
+        raise RuntimeError(
+            f"cali358 {step} returned non-json response "
+            f"(status={response.status_code}, content-type={content_type}, body={body!r})"
+        ) from exc
+
+
 class Cali358Crawler:
     def __init__(self, agent_id: int = None):
         """
@@ -60,7 +72,7 @@ class Cali358Crawler:
         """
         try:
             response = self.session.get(f"{self.api_url}/operator")
-            result = response.json()
+            result = _response_json(response, "operator")
         except requests.RequestException:
             return False
 
@@ -94,7 +106,7 @@ class Cali358Crawler:
 
         # 取得 auth preset
         preset_response = self.session.get(f"{self.api_url}/auth/preset")
-        preset = preset_response.json()
+        preset = _response_json(preset_response, "auth preset")
 
         if preset.get('resultCode') != 0:
             print(f"[錯誤] 無法取得 auth preset: {preset.get('messages')}")
@@ -120,7 +132,7 @@ class Cali358Crawler:
                 f"{self.api_url}/auth",
                 json=login_data
             )
-            result = response.json()
+            result = _response_json(response, "auth")
 
             if result.get('resultCode') == 0:
                 data = result.get('data', {})
@@ -200,7 +212,7 @@ class Cali358Crawler:
                 f"{self.api_url}/reports/profit/{self.agent_id}/summary",
                 params=params
             )
-            return response.json()
+            return _response_json(response, "profit summary")
         except requests.RequestException as e:
             print(f"[錯誤] 請求錯誤: {e}")
             return {}
@@ -243,7 +255,7 @@ class Cali358Crawler:
                 f"{self.api_url}/reports/profit/simple/{self.agent_id}",
                 params=params
             )
-            return response.json()
+            return _response_json(response, "simple profit")
         except requests.RequestException as e:
             print(f"[?航炊] 隢??航炊: {e}")
             return {}
@@ -289,7 +301,7 @@ class Cali358Crawler:
                 f"{self.api_url}/v2/reports/profit/{self.agent_id}/subagents",
                 params=params
             )
-            return response.json()
+            return _response_json(response, "subagents report")
         except requests.RequestException as e:
             print(f"[錯誤] 請求錯誤: {e}")
             return {}
